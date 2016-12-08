@@ -1,97 +1,110 @@
-// CPSC - Assignment 2
+// CPSC 355 Assignment 1
 // Author: Cam Davies (10174871)
-// Version 1
+// Version 1 - no macros
+// Calculate minimum of y = 5x^3 + 27x^2 - 27x - 43
+// Between the values of -6 to 6
 
 // Define the strings
-initialValues:		.string "multiplier = 0x%08x (%d) multiplicand = 0x%08x (%d) \n\n"
-printProduct:		.string "product = 0x%08x multiplier = 0x%08x\n"
-results:		.string "64-bit result = 0x%016lx (%ld)\n"
+tableString:	.string "|----------------|--------------|\n"
+formatString:	.string "| (x,y):\t | Min Val:\t|\n"
+xValue:			.string "| (%d,"			// String for x value
+yValue:			.string "%d)  \t "			// String for y value
+minValue:		.string "| %d \t\t|\n"			// String for minimum value
+totalMinValue:	.string "| Final Min:\t | %d \t\t|\n"	// String for final minimum value
 
-// Define the macros
-define(multiplier, w19)
-define(multiplicand, w20)
-define(product, w21)
-define(i, w22)
-define(temp1, x23)
-define(temp2, x24)
-define(negative, x25)
-define(result, x26)
-define(product64, x21)
-define(multiplier64, x19)
+	// Define main function for the program
+	.balign 4				// Instructions to be word aligned
+	.global main				// make main visible to OS
 
-							// Define the main function to our program
-	.balign 4					// Instructions word aligned
-	.global main					// Make "main" visible to the OS
-main:							// Main function, code starts
-	stp	x29, x30, [sp, -16]!			//
-	mov	x29, sp					// Update FP to current SP (post-incr SP)
-	
-	mov	multiplicand, -268435456		// Give multiplicand a value
-	mov	multiplier, 50				// Give multiplier a value
-	mov	product, 0				// Give product a value
-	mov	i, 0					// Give i a value
+main: stp x29, x30, [sp, -16]!
+	mov x29, sp				// update FP to current SP
+	mov x19, -6				// x19: 'x', loop counter, set to -6 at first
+	mov x20, 5				// x20: integer 5
+	mov x21, 27				// x21: integer 27
+	mov x22, -43			// x22: integer 43
+							// x23: x^3
+							// x24: N/A
+							// x25: x^2
+							// x26: 27*x
+							// x27: 27*x^2
+							// x28: Y
+	mov x29, 2000				// x29: Min
 
-	adrp	x0, initialValues			// Set 1st arg of printf high
-	add	x0, x0, :lo12:initialValues		// Set 2nd arg of printf low
-	mov	w1, multiplier				// 
-	mov	w2, multiplier				//
-	mov	w3, multiplicand			//
-	mov	w4, multiplicand			//
-        bl      printf					// Print statement of innitial values
-	
-i_declaration:						// Declare i
-	mov	i, 0					//
-	b	test					// Jump to test
-	
-forloop:						// For loop
-	and	w0, multiplier, 1			// 
-	cmp	w0, 1					//
-	b.ne	nextIf					//
-	add	product, product, multiplicand		// Product = product + multiplicand
+       	adrp    x0, tableString			//Print table
+       	add     x0, x0, :lo12:tableString
+       	bl      printf
 
-nextIf:							// If statement
-	asr	multiplier, multiplier, 1		// Arithmatic shift right
-	and	w1, product, 1				// and statement
-	cmp	w1, 1					// compare
-	b.ne	else					//
-	orr	multiplier, multiplier, 0x80000000	// or statement
-	b	lastPart				// jump to lastPart
+	adrp	x0, formatString		//Print table
+	add	x0, x0, :lo12:formatString
+	bl	printf
 
-else:							// Else statement for multiplier
-	and	multiplier, multiplier, 0x7FFFFFFF	// and statement
+	// The while loop Test
+test: cmp x19, 6				// compare loop counter (x19) and 6
+	b.gt done				// If x19 > 6, exit loop and branch to "done"
 
-lastPart:						// arith shift right for product
-	asr	product, product, 1			//
-	add	i, i, 1					// And increment i
+	// Start of loop:
 
-test:							// Test for loop
-	cmp	i, 32					// compare i < 32
-	b.lt	forloop					// jump to forloop
+	// Calculate Y =  5x^3 + 27x^2 - 27x - 43
+	// Calculate 5x^3, 5*x*x*x
+	mul x25, x19, x19			// x25 = x^2 = x*x
+	mul x23, x25, x19			// x23 = x^3 = x^2*x
+	mul x23, x23, x20			// x24 = 5*x^3
 
-	cmp	negative, 1				// see if multiplier is negative
-	b.ne	nextPrint				// jump to print if doesn't equal
-	sub	product, product, multiplicand		// subract, product = product - multiplicand
+	// Calculate 27x^2, 27*x*x
+	mul x27, x21, x25			// x27: 27*x^2
 
-nextPrint:						// 2nd print
-	adrp	x0, printProduct			// 
-	add	x0, x0, :lo12:printProduct		//
-	mov	w1, product				//
-	mov	w2, multiplier				//
-	bl	printf					//
-	
-	sxtw	product64, product			// Convert to 64 bit
-	and	temp1, product64, 0xFFFFFFFF		//
-	lsl	temp1, temp1, 32			//
-	sxtw	multiplier64, multiplier		//
-	and	temp2, multiplier64, 0xFFFFFFFF		//
-	add	result, temp1, temp2			//
+	// Calculate 27x
+	mul x26, x19, x21			// x26: 27*x
 
-	adrp	x0, results				//
-	add	x0, x0, :lo12:results			//
-	mov	x1, result				//
-	mov	x2, result				//
-	bl	printf					//
+	// Calculate Y
+	add x28, x23, x27			// x28 = Y = 5*(x^3) + 27*(x^2)
+	sub x28, x28, x26			// x28 = Y = 5*(x^3) + 27*(x^2) - 27*x
+	add x28, x28, x22			// x28 = Y = 5*(x^3) + 27*(x^2) - 27*x - 43
 
-done:	mov	w0, 0					// Restore registers and returns to calling code
-	ldp	x29, x30, [sp], 16			// Restore fp and lr from stack, post-incr sp
-	ret						// Return to caller:
+	//Print "X: "
+	adrp	x0, xValue			// Set the 1st arg of printf (higher-order bits)
+	add	x0, x0, :lo12:xValue		// Set the 1st arg of printf (lower 12 bits)
+	add	x1, x19, 0			// Set the 2nd arg of printf
+	bl	printf				// Print statement
+
+	//Print "Y: "
+	adrp	x0, yValue			// Set the 1st arg of print Higher
+	add	x0, x0, :lo12:yValue		// Set the 1st arg of printf Lower
+	add	x1, x28, 0			// Set the 2nd arg of printf
+	bl	printf				// Print statement
+
+	// If statement.
+	cmp	x28, x29			// If Y < min, execute
+	b.gt	next				// Pass to next statement
+	mov	x29, x28			// Set the min equal to the new minimum value
+
+next:
+	//Print "Min: "
+	adrp	x0, minValue			// Set the 1st arg of printf Higher
+	add	x0, x0, :lo12:minValue		// Set the 1st arg of print Lower
+	add	x1, x29, 0			// Set the 2nd arg of printf
+	bl	printf				// Print statement
+
+	// End of loop
+	add	x19, x19, 1			// Increment x19 by 1 (x++)
+	b	test				// Branch to test
+
+done:	mov	w0, 0				//??
+
+        adrp    x0, tableString			//print table
+        add     x0, x0, :lo12:tableString
+        bl	printf
+
+	adrp	x0, totalMinValue		// Set the 1st arg of printf Higher
+	add	x0, x0, :lo12:totalMinValue	// Set the 1st arg of printf Lower
+	add	x1, x29, 0			// Set the 2nd arg of printf
+	bl	printf				// Print statement
+
+        adrp    x0, tableString			//print table
+        add     x0, x0, :lo12:tableString
+        bl	printf
+
+	// Restore registers and return calling code
+	ldp	x29, x30, [sp], 16		// Restore FP and LR from stack
+	ret					// Return to caller
+
